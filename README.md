@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/preview.png" alt="ZapretGUI">
+</p>
+
 # ZapretGUI
 
 GUI для [zapret2](https://github.com/bol-van/zapret2), созданный для того, чтобы сделать его использование проще и удобнее.
