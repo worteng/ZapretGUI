@@ -1,0 +1,561 @@
+
+<!DOCTYPE html>
+<html lang="ru" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>ZapretGUI</title>
+
+  <link rel="stylesheet" href="styles.css">
+
+  <!--
+    WebView/WebKit может запускать HTML без localStorage.
+    app.js ожидает его наличие, поэтому создаём безопасный fallback.
+    Если настоящий localStorage доступен — ничего не меняем.
+  -->
+  <script>
+    (() => {
+      try {
+        const storage = window.localStorage;
+
+        // Проверяем, что хранилище действительно работает.
+        const testKey = "__zapretgui_storage_test__";
+        storage.setItem(testKey, "1");
+        storage.removeItem(testKey);
+      } catch (error) {
+        const memoryStorage = (() => {
+          const data = Object.create(null);
+
+          return {
+            getItem(key) {
+              return Object.prototype.hasOwnProperty.call(data, key)
+                ? data[key]
+                : null;
+            },
+
+            setItem(key, value) {
+              data[key] = String(value);
+            },
+
+            removeItem(key) {
+              delete data[key];
+            },
+
+            clear() {
+              Object.keys(data).forEach(key => delete data[key]);
+            },
+
+            key(index) {
+              const keys = Object.keys(data);
+              return keys[index] ?? null;
+            },
+
+            get length() {
+              return Object.keys(data).length;
+            }
+          };
+        })();
+
+        try {
+          Object.defineProperty(window, "localStorage", {
+            value: memoryStorage,
+            configurable: true,
+            enumerable: true
+          });
+        } catch {
+          // Если WebView запрещает даже переопределение localStorage,
+          // app.js всё равно не сможет использовать его напрямую.
+        }
+      }
+    })();
+  </script>
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- ==================== DOCK ==================== -->
+
+    <nav class="dock" aria-label="Разделы">
+      <div class="dock-items">
+
+        <button
+          class="dock-item active"
+          data-route="home"
+          type="button"
+          aria-label="Главная"
+          title="Главная"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3 10.5 12 3l9 7.5"/>
+            <path d="M5 9.5V21h14V9.5"/>
+            <path d="M9.5 21v-6h5v6"/>
+          </svg>
+        </button>
+
+        <button
+          class="dock-item"
+          data-route="strategies"
+          type="button"
+          aria-label="Стратегии"
+          title="Стратегии"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+            <path d="M4.9 4.9l2.1 2.1M17 17l2.1 2.1"/>
+            <path d="M19.1 4.9 17 7M7 17l-2.1 2.1"/>
+          </svg>
+        </button>
+
+        <button
+          class="dock-item"
+          data-route="monitoring"
+          type="button"
+          aria-label="Мониторинг"
+          title="Мониторинг"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3 12h4l3-8 4 16 3-8h4"/>
+          </svg>
+        </button>
+
+        <button
+          class="dock-item"
+          data-route="autopilot"
+          type="button"
+          aria-label="Автопилот"
+          title="Автопилот"
+          hidden
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="9"/>
+            <path d="M12 7v5l3.5 2"/>
+          </svg>
+        </button>
+
+        <button
+          class="dock-item"
+          data-route="diagnostics"
+          type="button"
+          aria-label="Диагностика"
+          title="Диагностика"
+          hidden
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M14.5 4.5 10 9l-2 2a4.7 4.7 0 0 0 6.6 6.6l2-2 4.5-4.5a7.5 7.5 0 1 0-6.6-6.6Z"/>
+            <circle cx="7.5" cy="16.5" r="4.5"/>
+            <path d="m4 20-2.5 2.5"/>
+          </svg>
+        </button>
+
+        <button
+          class="dock-item"
+          data-route="logs"
+          type="button"
+          aria-label="Логи"
+          title="Логи"
+          hidden
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 6h16M4 12h16M4 18h10"/>
+          </svg>
+        </button>
+
+        <button
+          class="dock-item"
+          data-route="settings"
+          type="button"
+          aria-label="Настройки"
+          title="Настройки"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="3.2"/>
+            <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.01a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.01a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1Z"/>
+          </svg>
+        </button>
+
+      </div>
+    </nav>
+
+    <!-- ==================== CONTENT ==================== -->
+
+    <main class="content" id="content">
+
+      <!-- Главная -->
+      <section class="screen" id="screen-home">
+
+        <div class="home">
+
+          <div class="status" id="status-block">
+            <span class="status-dot" id="status-dot"></span>
+            <h1 class="status-word" id="status-word">Проверка…</h1>
+            <p class="status-hint" id="status-hint"></p>
+          </div>
+
+          <button class="power" id="power-btn" type="button">
+            <span class="power-label" id="power-label">Включить</span>
+          </button>
+
+          <div class="steps" id="power-steps" hidden></div>
+
+          <button class="card strategy-card" id="strategy-card" type="button">
+            <span class="strategy-card-text">
+              <span class="card-label">Стратегия</span>
+              <span class="strategy-name" id="strategy-name">—</span>
+              <span class="strategy-desc" id="strategy-desc"></span>
+            </span>
+
+            <span class="chevron" aria-hidden="true">→</span>
+          </button>
+
+          <p class="meta" id="meta-line"></p>
+
+          <div class="warn-card" id="warn-install" hidden>
+            <p>
+              <strong>zapret2 не установлен.</strong>
+              Без него защита не работает.
+            </p>
+
+            <button class="btn btn-primary" id="btn-install" type="button" hidden>
+              Установить сейчас
+            </button>
+          </div>
+
+          <div class="warn-card" id="warn-error" hidden>
+            <p id="error-text"></p>
+
+            <div class="warn-actions">
+              <button class="btn" id="btn-retry" type="button">
+                Повторить
+              </button>
+
+              <button class="btn btn-link" id="btn-goto-diag" type="button" hidden>
+                Диагностика
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Стратегии -->
+      <section class="screen" id="screen-strategies" hidden>
+        <div class="screen-head">
+          <h1 class="h1">Стратегии</h1>
+
+          <button class="btn" id="btn-new-strategy" type="button">
+            + Новая
+          </button>
+        </div>
+
+        <p class="subtitle">
+          Выберите способ обхода. Активная стратегия применяется при включении защиты.
+        </p>
+
+        <div class="strategy-list" id="strategy-list"></div>
+      </section>
+
+      <!-- Мониторинг -->
+      <section class="screen" id="screen-monitoring" hidden>
+
+        <div class="screen-head">
+          <h1 class="h1">Мониторинг</h1>
+
+          <button class="btn" id="btn-check-now" type="button">
+            Проверить сейчас
+          </button>
+        </div>
+
+        <div class="card" id="monitor-results">
+          <p class="muted">Нажмите «Проверить сейчас».</p>
+        </div>
+
+      </section>
+
+      <!-- Автопилот -->
+      <section class="screen" id="screen-autopilot" hidden>
+        <h1 class="h1">Автопилот</h1>
+
+        <div class="card placeholder">
+          <p>
+            Автопилот появится в следующей версии.<br>
+            Сейчас стратегию можно менять вручную.
+          </p>
+
+          <button class="btn" data-route="strategies" type="button">
+            Перейти к стратегиям
+          </button>
+        </div>
+      </section>
+
+      <!-- Диагностика -->
+      <section class="screen" id="screen-diagnostics" hidden>
+        <h1 class="h1">Диагностика</h1>
+
+        <div class="card placeholder">
+          <p>Полная диагностика появится в следующей версии.</p>
+        </div>
+      </section>
+
+      <!-- Логи -->
+      <section class="screen" id="screen-logs" hidden>
+        <h1 class="h1">Логи</h1>
+
+        <div class="card placeholder">
+          <p>
+            Логов пока нет.
+            Включите защиту — записи появятся здесь.
+          </p>
+        </div>
+      </section>
+
+      <!-- Настройки -->
+      <section class="screen" id="screen-settings" hidden>
+
+        <h1 class="h1">Настройки</h1>
+
+        <div class="card settings-card">
+          <h2 class="h2">Запуск</h2>
+
+          <label class="setting-row">
+            <span>
+              <span class="setting-name">
+                Автозапуск защиты при старте системы
+              </span>
+
+              <span class="setting-desc">
+                Служба zapret2 будет запускаться вместе с системой.
+              </span>
+            </span>
+
+            <input
+              type="checkbox"
+              class="toggle"
+              id="set-autostart"
+            >
+          </label>
+        </div>
+
+        <div class="card settings-card">
+          <h2 class="h2">Проверки</h2>
+
+          <label class="setting-row">
+            <span>
+              <span class="setting-name">
+                Интервал проверок
+              </span>
+
+              <span class="setting-desc">
+                Как часто проверять доступность сервисов.
+              </span>
+            </span>
+
+            <select class="select" id="set-interval">
+              <option value="2">2 минуты</option>
+              <option value="5" selected>5 минут</option>
+              <option value="10">10 минут</option>
+              <option value="30">30 минут</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="card settings-card">
+          <h2 class="h2">Внешний вид</h2>
+
+          <label class="setting-row">
+            <span>
+              <span class="setting-name">Тема</span>
+
+              <span class="setting-desc">
+                Светлая, тёмная или вслед за системой.
+              </span>
+            </span>
+
+            <select class="select" id="set-theme">
+              <option value="auto" selected>Автоматически</option>
+              <option value="light">Светлая</option>
+              <option value="dark">Тёмная</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="card settings-card">
+          <h2 class="h2">О программе</h2>
+          <p class="muted" id="about-line">ZapretGUI</p>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==================== DIALOG ==================== -->
+
+  <div class="overlay" id="dialog-overlay" hidden>
+    <div
+      class="dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dialog-title"
+    >
+      <h2 class="h2" id="dialog-title">
+        Применить стратегию?
+      </h2>
+
+      <p class="dialog-text" id="dialog-text"></p>
+
+      <div class="dialog-actions">
+        <button class="btn" id="dialog-cancel" type="button">
+          Отмена
+        </button>
+
+        <button class="btn btn-primary" id="dialog-ok" type="button">
+          Применить
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== EDITOR ==================== -->
+
+  <div class="overlay" id="editor-overlay" hidden>
+    <div
+      class="dialog editor-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="editor-title"
+    >
+      <h2 class="h2" id="editor-title">Редактор стратегии</h2>
+
+      <div class="editor-fields" id="editor-fields" hidden>
+        <label class="editor-field">
+          <span class="setting-name">Название</span>
+          <input class="input" id="editor-name" type="text" maxlength="64" autocomplete="off">
+        </label>
+
+        <label class="editor-field">
+          <span class="setting-name">Описание</span>
+          <input class="input" id="editor-desc" type="text" maxlength="200" autocomplete="off">
+        </label>
+      </div>
+
+      <label class="editor-field">
+        <span class="setting-name">MODE_FILTER</span>
+        <select class="select" id="editor-mode">
+          <option value="none">none</option>
+          <option value="ipset">ipset</option>
+          <option value="hostlist" selected>hostlist</option>
+          <option value="autohostlist">autohostlist</option>
+        </select>
+      </label>
+
+      <label class="editor-field">
+        <span class="setting-name">NFQWS2_OPT — одна позиция на строку</span>
+        <textarea
+          class="textarea editor-textarea"
+          id="editor-opt"
+          rows="14"
+          spellcheck="false"
+          autocomplete="off"
+          placeholder="--filter-tcp=443 --filter-l7=tls --payload=tls_client_hello &lt;HOSTLIST&gt; --lua-desync=fake:blob=fake_default_tls:tcp_md5:repeats=6"
+        ></textarea>
+      </label>
+
+      <div class="editor-result" id="editor-result" hidden></div>
+
+      <div class="dialog-actions editor-actions">
+        <button class="btn btn-link" id="editor-delete" type="button" hidden>
+          Удалить
+        </button>
+
+        <button class="btn" id="editor-reset" type="button">
+          Сбросить
+        </button>
+
+        <button class="btn" id="editor-check" type="button">
+          Проверить
+        </button>
+
+        <button class="btn" id="editor-cancel" type="button">
+          Отмена
+        </button>
+
+        <button class="btn btn-primary" id="editor-save" type="button">
+          Сохранить и применить
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOASTS ==================== -->
+
+  <div
+    class="toasts"
+    id="toasts"
+    aria-live="polite"
+    aria-atomic="true"
+  ></div>
+
+  <!-- ==================== APPLICATION ==================== -->
+
+  <script src="app.js"></script>
+</body>
+</html>
